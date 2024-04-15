@@ -13,8 +13,172 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Role {
+  id    Int    @id @default(autoincrement())
+  title String @db.VarChar(64)
+  User  User[]
+
+  @@map("roles")
+}
+
 model User {
-  id              Int    @id @default(autoincrement())
-  email           String @unique
-  hashed_password String
+  id             Int    @id @default(autoincrement())
+  email          String @unique @db.VarChar(64)
+  hashedPassword String @map("hashed_password") @db.VarChar(72)
+  roleId         Int    @map("role_id")
+
+  role      Role       @relation(fields: [roleId], references: [id])
+  customers Customer[]
+  staff     Staff[]
+
+  @@map("users")
+}
+
+model Customer {
+  id          Int    @id @default(autoincrement())
+  userId      Int    @map("user_id")
+  firstName   String @map("first_name") @db.VarChar(128)
+  lastName    String @map("last_name") @db.VarChar(128)
+  phoneNumber String @map("phone_number") @db.VarChar(15)
+
+  user     User      @relation(fields: [userId], references: [id])
+  leasings Leasing[]
+
+  @@map("customers")
+}
+
+model Staff {
+  id         Int    @id @default(autoincrement())
+  userId     Int    @map("user_id")
+  firstName  String @map("first_name") @db.VarChar(128)
+  lastName   String @map("last_name") @db.VarChar(128)
+  patronymic String @db.VarChar(128)
+  positionId Int    @map("position_id")
+
+  position       Position        @relation(fields: [positionId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+  salaryPayments SalaryPayment[]
+  leasings       Leasing[]
+
+  @@map("staff")
+}
+
+model Position {
+  id    Int     @id @default(autoincrement())
+  title String  @db.VarChar(64)
+  staff Staff[]
+
+  @@map("positions")
+}
+
+model SalaryPayment {
+  id          Int     @id @default(autoincrement())
+  employeeId  Int     @map("employee_id")
+  totalAmount Decimal @map("total_amount") @db.Decimal(10, 2)
+
+  employee Staff @relation(fields: [employeeId], references: [id])
+
+  @@map("salary_payments")
+}
+
+model Fleet {
+  id                Int    @id @default(autoincrement())
+  make              String @db.VarChar(64)
+  model             String @db.VarChar(64)
+  productionYear    Int    @map("production_year")
+  classId           Int    @map("class_id")
+  mileage           Int
+  vin               String @db.VarChar(17)
+  parkingLocationId Int    @map("parking_location_id")
+
+  class              VehicleClass        @relation(fields: [classId], references: [id])
+  parkingLocation    ParkingLocation     @relation(fields: [parkingLocationId], references: [id])
+  leasings           Leasing[]
+  maintenanceReports MaintenanceReport[]
+
+  @@map("fleet")
+}
+
+model VehicleClass {
+  id           Int     @id @default(autoincrement())
+  title        String  @db.VarChar(128)
+  pricePerHour Decimal @map("price_per_hour") @db.Decimal(10, 2)
+  description  String  @db.VarChar(4096)
+
+  fleet Fleet[]
+
+  @@map("vehicle_classes")
+}
+
+model ParkingLocation {
+  id      Int    @id @default(autoincrement())
+  title   String @db.VarChar(128)
+  address String @db.VarChar(256)
+
+  fleet Fleet[]
+
+  @@map("parking_locations")
+}
+
+model Leasing {
+  id                  Int      @id @default(autoincrement())
+  vehicleId           Int      @map("vehicle_id")
+  createdByEmployeeId Int      @map("created_by_employee_id")
+  customerId          Int      @map("customer_id")
+  startDate           DateTime @map("start_date")
+  endDate             DateTime @map("end_date")
+  allowedMileage      Int      @map("allowed_mileage")
+
+  vehicle  Fleet     @relation(fields: [vehicleId], references: [id])
+  employee Staff     @relation(fields: [createdByEmployeeId], references: [id])
+  customer Customer  @relation(fields: [customerId], references: [id])
+  invoices Invoice[]
+
+  @@map("leasings")
+}
+
+model Invoice {
+  id              Int     @id @default(autoincrement())
+  leasingId       Int     @map("leasing_id")
+  amountDue       Decimal @map("amount_due") @db.Decimal(10, 2)
+  insuranceAmount Decimal @map("insurance_amount") @db.Decimal(10, 2)
+  status          String  @db.VarChar(32)
+
+  leasing  Leasing   @relation(fields: [leasingId], references: [id])
+  payments Payment[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id          Int      @id @default(autoincrement())
+  invoiceId   Int      @map("invoice_id")
+  createdOn   DateTime @map("created_on")
+  totalAmount Decimal  @map("total_amount") @db.Decimal(10, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("payments")
+}
+
+model MaintenanceReport {
+  id          Int      @id @default(autoincrement())
+  vehicleId   Int      @map("vehicle_id")
+  startDate   DateTime @map("start_date")
+  endDate     DateTime @map("end_date")
+  description String   @db.VarChar(4096)
+  totalCost   Decimal  @map("total_cost") @db.Decimal(10, 2)
+
+  vehicle Fleet @relation(fields: [vehicleId], references: [id])
+
+  @@map("maintenance_reports")
+}
+
+model FinanceReports {
+  id             Int     @id @default(autoincrement())
+  leasingsIncome Decimal @map("leasing_income") @db.Decimal(10, 2)
+  taxesPaid      Decimal @map("taxes_paid") @db.Decimal(10, 2)
+  fuelExpenses   Decimal @map("fuel_expenses") @db.Decimal(10, 2)
+
+  @@map("finance_reports")
 }
