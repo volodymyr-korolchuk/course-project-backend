@@ -112,7 +112,6 @@ model VehicleClass {
 
 model ParkingLocation {
   id      Int    @id @default(autoincrement())
-  title   String @db.VarChar(128)
   address String @db.VarChar(256)
 
   fleet Fleet[]
