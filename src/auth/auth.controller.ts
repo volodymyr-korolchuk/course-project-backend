@@ -1,34 +1,38 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
-  HttpStatus,
   Post,
   Req,
-  Res,
+  UseGuards,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
 import { AuthDto } from './dto/auth.dto';
+import { AuthService } from './auth.service';
+import { LocalGuard } from './guards/local.guard';
+import { Request } from 'express';
+import { JwtGuard } from './guards/jwt.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private authService: AuthService) {}
 
-  @Post('signup')
-  signUp(@Body() authDto: AuthDto) {
-    return this.authService.signUp(authDto);
+  @Post('login')
+  @HttpCode(200)
+  @UseGuards(LocalGuard)
+  async login(@Req() req: Request) {
+    return req.user;
   }
 
-  @Post('signin')
-  @HttpCode(HttpStatus.OK)
-  signIn(@Body() authDto: AuthDto, @Req() req, @Res() res) {
-    return this.authService.signIn(authDto, req, res);
+  @Post('register')
+  register(@Body() authDto: AuthDto) {
+    return this.authService.register(authDto);
   }
 
-  @Post('logout')
-  @HttpCode(HttpStatus.OK)
-  logOut(@Req() req, @Res() res) {
-    return this.authService.logOut(req, res);
+  @Get('status')
+  @UseGuards(JwtGuard)
+  status(@Req() req: Request) {
+    req.user;
   }
 }
