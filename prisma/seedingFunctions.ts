@@ -43,9 +43,8 @@ export function getVehicleClasses() {
   return vehicleClasses;
 }
 
-export async function generateUsers(prisma: PrismaClient, amount: number) {
+async function generateUsers(prisma: PrismaClient, amount: number) {
   const users = [];
-
   const roles = await prisma.role.findMany();
 
   for (let i = 0; i < amount; i++) {
@@ -61,11 +60,21 @@ export async function generateUsers(prisma: PrismaClient, amount: number) {
   return users;
 }
 
-export async function generateCustomers(amount: number) {
-  const customers = [];
+export async function generateUser(roleId: number) {
+  return {
+    email: faker.internet.email(),
+    hashedPassword: faker.internet.password(),
+    roleId,
+  };
+}
 
-  for (let i = 0; i < amount; i++) {
+export async function generateCustomers(prisma: PrismaClient, amount: number) {
+  const customers = [];
+  const employees = await prisma.staff.findMany();
+
+  for (let i = employees.length; i < amount; i++) {
     const customer = {
+      userId: i + 1,
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
       phoneNumber: faker.phone.number(),
@@ -81,12 +90,11 @@ export function generatePositions() {
   return ['Consultant', 'Admin'];
 }
 
-export async function generateStaff(prisma: PrismaClient) {
+export async function generateStaff(prisma: PrismaClient, amount) {
   const staff = [];
-  const users = await prisma.user.findMany();
   const positions = await prisma.position.findMany();
 
-  for (let i = 0; i < users.length; i++) {
+  for (let i = 0; i < amount; i++) {
     const employee = {
       userId: i + 1,
       firstName: faker.person.firstName(),
@@ -326,4 +334,43 @@ export async function generateDamageReports(prisma: PrismaClient) {
   }
 
   return reports;
+}
+
+export async function generateFinanceAnalytics(prisma: PrismaClient) {
+  const monthlyAnalytics = [];
+  const startMonth = await prisma.leasing.findFirst({
+    orderBy: { pickupDate: 'asc' },
+    select: {
+      pickupDate: true,
+    },
+  });
+
+  const endMonth = await prisma.leasing.findFirst({
+    orderBy: { returnDate: 'desc' },
+    select: {
+      returnDate: true,
+    },
+  });
+
+  const startDate = new Date(startMonth.pickupDate);
+  const endDate = new Date(endMonth.returnDate);
+
+  const diffInMonths =
+    (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+    (endDate.getMonth() - startDate.getMonth());
+
+  for (let i = 0; i < diffInMonths; i++) {
+    const analytics = {
+      leasingsIncome: faker.number.int({ min: 10000, max: 50000 }),
+      salariesPaid: faker.number.int({ min: 8000, max: 15000 }),
+      taxesPaid: faker.number.int({ min: 1000, max: 7000 }),
+      maintenanceExpenses: faker.number.int({ min: 200, max: 5000 }),
+      fuelExpenses: faker.number.int({ min: 800, max: 2000 }),
+      createdOn: new Date(`2024-${i < 10 ? `0${i + 1}` : `${i + 1}`}-28`),
+    };
+
+    monthlyAnalytics.push(analytics);
+  }
+
+  return monthlyAnalytics;
 }

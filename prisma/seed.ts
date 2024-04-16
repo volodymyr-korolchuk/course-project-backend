@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import {
   generateCustomers,
   generateDamageReports,
+  generateFinanceAnalytics,
   generateFleet,
   generateInvoices,
   generateLeasings,
@@ -11,10 +12,11 @@ import {
   generatePositions,
   generateSalaryPayments,
   generateStaff,
-  generateUsers,
+  generateUser,
   generateVehicleClasses,
   getRoles,
 } from './seedingFunctions';
+import { faker } from '@faker-js/faker';
 
 const prisma = new PrismaClient();
 
@@ -68,24 +70,27 @@ async function main() {
     await prisma.role.create({ data: { title: role } });
   }
 
-  const users = await generateUsers(prisma, 20);
-  for (const user of users) {
-    await prisma.user.create({ data: user });
-  }
-
-  const customers = await generateCustomers(50);
-  for (const customer of customers) {
-    await prisma.customer.create({ data: customer });
-  }
-
   const positions = generatePositions();
   for (const position of positions) {
     await prisma.position.create({ data: { title: position } });
   }
 
-  const staff = await generateStaff(prisma);
+  const staff = await generateStaff(prisma, 10);
   for (const employee of staff) {
+    const roleId = faker.number.int({ min: 2, max: 3 });
+    await prisma.user.create({
+      data: await generateUser(roleId),
+    });
     await prisma.staff.create({ data: employee });
+  }
+
+  const customers = await generateCustomers(prisma, 100);
+  for (const customer of customers) {
+    const roleId = 1;
+    await prisma.user.create({
+      data: await generateUser(roleId),
+    });
+    await prisma.customer.create({ data: customer });
   }
 
   const salaryPayments = await generateSalaryPayments(prisma);
@@ -139,6 +144,11 @@ async function main() {
   const damageReports = await generateDamageReports(prisma);
   for (const report of damageReports) {
     await prisma.damageReport.create({ data: report });
+  }
+
+  const monthlyAnalytics = await generateFinanceAnalytics(prisma);
+  for (const report of monthlyAnalytics) {
+    await prisma.monthlyAnalytics.create({ data: report });
   }
 }
 

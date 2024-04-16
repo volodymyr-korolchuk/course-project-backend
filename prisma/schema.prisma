@@ -17,7 +17,7 @@ model Role {
   id    Int    @id @default(autoincrement())
   title String @db.VarChar(64)
 
-  users User[]
+  Users User[]
 
   @@map("roles")
 }
@@ -28,19 +28,22 @@ model User {
   hashedPassword String @map("hashed_password") @db.VarChar(72)
   roleId         Int    @map("role_id")
 
-  role     Role    @relation(fields: [roleId], references: [id])
-  employee Staff[]
+  Role     Role      @relation(fields: [roleId], references: [id])
+  Customer Customer?
+  Staff    Staff?
 
   @@map("users")
 }
 
 model Customer {
   id          Int    @id @default(autoincrement())
+  userId      Int    @unique @map("user_id")
   firstName   String @map("first_name") @db.VarChar(128)
   lastName    String @map("last_name") @db.VarChar(128)
   phoneNumber String @map("phone_number") @db.VarChar(32)
 
-  leasings Leasing[]
+  User     User      @relation(fields: [userId], references: [id])
+  Leasings Leasing[]
 
   @@map("customers")
 }

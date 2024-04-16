@@ -3,11 +3,12 @@ import { AuthDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
+    private prisma: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -22,14 +23,14 @@ export class AuthService {
 
     const passwordsMatch = bcrypt.compare(
       authDto.password,
-      existingUser.hashed_password,
+      existingUser.hashedPassword,
     );
 
     if (!passwordsMatch) {
       return null;
     }
 
-    const { hashed_password, ...user } = existingUser;
+    const { hashedPassword, ...user } = existingUser;
 
     return await this.jwtService.sign(user);
   }
@@ -48,7 +49,8 @@ export class AuthService {
     await this.prisma.user.create({
       data: {
         email: authDto.email,
-        hashed_password: hashedPassword,
+        roleId: 1,
+        hashedPassword: hashedPassword,
       },
     });
   }
