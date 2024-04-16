@@ -18,7 +18,51 @@ import {
 
 const prisma = new PrismaClient();
 
+async function isDatabaseEmpty() {
+  try {
+    const modelNames = [
+      'Role',
+      'User',
+      'Customer',
+      'Staff',
+      'Position',
+      'SalaryPayment',
+      'Fleet',
+      'VehicleClass',
+      'ParkingLocation',
+      'Leasing',
+      'Invoice',
+      'Payment',
+      'MaintenanceReport',
+      'DamageReport',
+      'MonthlyAnalytics',
+    ];
+
+    for (const modelName of modelNames) {
+      const count = await prisma[modelName].count();
+      if (count > 0) {
+        console.error(
+          '\x1b[31m%s\x1b[0m',
+          `\nFailed to seed the database! --> Table ${modelName} is not empty.`,
+        );
+        return false;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking if database is not empty:', error);
+    return false;
+  }
+}
+
 async function main() {
+  const isDbEmpty = await isDatabaseEmpty();
+
+  if (!isDbEmpty) {
+    return;
+  }
+
   const roles = getRoles();
   for (const role of roles) {
     await prisma.role.create({ data: { title: role } });
