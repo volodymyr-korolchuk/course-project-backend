@@ -1,14 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { FleetService } from './fleet.service';
-import { CreateFleetDto } from './dto/create-fleet.dto';
-import { UpdateFleetDto } from './dto/update-fleet.dto';
+import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 
 @Controller('fleet')
 export class FleetController {
   constructor(private readonly fleetService: FleetService) {}
 
   @Post()
-  create(@Body() createFleetDto: CreateFleetDto) {
+  create(@Body() createFleetDto: CreateVehicleDto) {
     return this.fleetService.create(createFleetDto);
   }
 
@@ -23,7 +31,7 @@ export class FleetController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateFleetDto: UpdateFleetDto) {
+  update(@Param('id') id: string, @Body() updateFleetDto: UpdateVehicleDto) {
     return this.fleetService.update(+id, updateFleetDto);
   }
 

@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { PrismaClient } from '@prisma/client';
 
-const ROLES = ['CUSTOMER', 'CONSULTANT', 'ADMIN'];
+const ROLES = ['Guest', 'Customer', 'Employee', 'Admin'];
 const VEHICLE_CLASSES = [
   {
     title: 'SUV',

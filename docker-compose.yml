@@ -3,11 +3,11 @@ version: '3.8'
 services:
   db:
     image: postgres:latest
-    container_name: course-project-container
+    container_name: course_project_container
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
-      POSTGRES_DB: course-project-db
+      POSTGRES_DB: course_project_db
     ports:
       - '5555:5432'

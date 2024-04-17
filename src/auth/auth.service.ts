@@ -1,19 +1,33 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { AuthDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient } from '@prisma/client';
+import {
+  ExtendedPrismaClient,
+  PrismaClientManager,
+} from 'src/manager/manager.service';
 
 @Injectable()
 export class AuthService {
+  private client: ExtendedPrismaClient;
+
   constructor(
-    private prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) {}
+    private manager: PrismaClientManager,
+  ) {
+    const setupClient = async () => {
+      // tenantId should be extracted from nest asyncLocalStorage
+      this.client = await this.manager.getClient('Guest');
+      await this.client.$connect();
+      console.log('Auth: ', this.client.clientName, this.client.connectionString);
+    };
+
+    setupClient();
+  }
 
   async validateUser(authDto: AuthDto) {
-    const existingUser = await this.prisma.user.findUnique({
+    const prisma = await this.manager.getClient('admin');
+    const existingUser = await prisma.user.findUnique({
       where: { email: authDto.email },
     });
 
@@ -30,7 +44,7 @@ export class AuthService {
       return null;
     }
 
-    const userRole = await this.prisma.role.findUnique({
+    const userRole = await prisma.role.findUnique({
       where: { id: existingUser.roleId },
       select: {
         title: true,
@@ -47,7 +61,9 @@ export class AuthService {
   }
 
   async register(authDto: AuthDto) {
-    const existingUser = await this.prisma.user.findUnique({
+    const prisma = await this.manager.getClient('Admin');
+
+    const existingUser = await prisma.user.findUnique({
       where: { email: authDto.email },
     });
 
@@ -57,7 +73,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(authDto.password, 10);
 
-    await this.prisma.user.create({
+    await prisma.user.create({
       data: {
         email: authDto.email,
         roleId: 1,

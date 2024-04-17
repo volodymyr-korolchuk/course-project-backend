@@ -1,22 +1,43 @@
 import { Injectable } from '@nestjs/common';
-import { CreateFleetDto } from './dto/create-fleet.dto';
-import { UpdateFleetDto } from './dto/update-fleet.dto';
+import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import {
+  ExtendedPrismaClient,
+  PrismaClientManager,
+} from 'src/manager/manager.service';
 
 @Injectable()
 export class FleetService {
-  create(createFleetDto: CreateFleetDto) {
-    return 'This action adds a new fleet';
+  private client: ExtendedPrismaClient;
+
+  constructor(private readonly manager: PrismaClientManager) {
+    const setupClient = async () => {
+      // tenantId should be extracted from nest asyncLocalStorage
+      this.client = await this.manager.getClient('Admin');
+      await this.client.$connect();
+      console.log(
+        'Fleet: ',
+        this.client.clientName,
+        this.client.connectionString,
+      );
+    };
+
+    setupClient();
   }
 
-  findAll() {
-    return `This action returns all fleet`;
+  async create(createVehicleDto: CreateVehicleDto) {
+    return await this.client.fleet.create({ data: createVehicleDto });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} fleet`;
+  async findAll() {
+    return await this.client.fleet.findMany();
   }
 
-  update(id: number, updateFleetDto: UpdateFleetDto) {
+  async findOne(id: number) {
+    return await this.client.fleet.findUnique({ where: { id } });
+  }
+
+  update(id: number, updateVehicleDto: UpdateVehicleDto) {
     return `This action updates a #${id} fleet`;
   }
 
