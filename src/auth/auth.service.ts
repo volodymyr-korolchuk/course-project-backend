@@ -30,9 +30,20 @@ export class AuthService {
       return null;
     }
 
-    const { hashedPassword, ...user } = existingUser;
+    const userRole = await this.prisma.role.findUnique({
+      where: { id: existingUser.roleId },
+      select: {
+        title: true,
+      },
+    });
+    const { hashedPassword, roleId, ...user } = existingUser;
 
-    return await this.jwtService.sign(user);
+    return await this.jwtService.sign({
+      user: {
+        ...user,
+        role: userRole.title,
+      },
+    });
   }
 
   async register(authDto: AuthDto) {
