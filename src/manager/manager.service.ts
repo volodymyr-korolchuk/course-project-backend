@@ -17,12 +17,6 @@ export class ExtendedPrismaClient extends PrismaClient {
 export class PrismaClientManager implements OnModuleDestroy {
   private clients: { [key: string]: ExtendedPrismaClient } = {};
 
-  getTenantId(req: Request) {
-    // extract role from JWT token
-    //return req?.user?.role ?? 'undefinedRole';
-    return 'Guest';
-  }
-
   async getClient(tenantId: string): Promise<ExtendedPrismaClient> {
     let client = this.clients[tenantId];
 
@@ -42,6 +36,7 @@ export class PrismaClientManager implements OnModuleDestroy {
 
       client.clientName = tenantId;
       client.connectionString = dbUrl;
+      await client.$connect();
 
       this.clients[tenantId] = client;
     }

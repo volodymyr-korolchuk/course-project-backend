@@ -13,21 +13,24 @@ export class AuthService {
 
   constructor(
     private readonly jwtService: JwtService,
-    private manager: PrismaClientManager,
+    private readonly manager: PrismaClientManager,
   ) {
     const setupClient = async () => {
-      // tenantId should be extracted from nest asyncLocalStorage
-      this.client = await this.manager.getClient('Guest');
+      this.client = await this.manager.getClient('guest');
+
       await this.client.$connect();
-      console.log('Auth: ', this.client.clientName, this.client.connectionString);
+      console.log(
+        'Auth: ',
+        this.client.clientName,
+        this.client.connectionString,
+      );
     };
 
     setupClient();
   }
 
   async validateUser(authDto: AuthDto) {
-    const prisma = await this.manager.getClient('admin');
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await this.client.user.findUnique({
       where: { email: authDto.email },
     });
 
@@ -44,7 +47,7 @@ export class AuthService {
       return null;
     }
 
-    const userRole = await prisma.role.findUnique({
+    const userRole = await this.client.role.findUnique({
       where: { id: existingUser.roleId },
       select: {
         title: true,
@@ -53,17 +56,13 @@ export class AuthService {
     const { hashedPassword, roleId, ...user } = existingUser;
 
     return await this.jwtService.sign({
-      user: {
-        ...user,
-        role: userRole.title,
-      },
+      ...user,
+      role: userRole.title,
     });
   }
 
   async register(authDto: AuthDto) {
-    const prisma = await this.manager.getClient('Admin');
-
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await this.client.user.findUnique({
       where: { email: authDto.email },
     });
 
@@ -73,7 +72,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(authDto.password, 10);
 
-    await prisma.user.create({
+    await this.client.user.create({
       data: {
         email: authDto.email,
         roleId: 1,

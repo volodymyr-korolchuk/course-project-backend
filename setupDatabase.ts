@@ -1,3 +1,4 @@
+const { execSync } = require('child_process');
 const readline = require('readline');
 
 const rl = readline.createInterface({
@@ -20,12 +21,12 @@ async function dropRolesIfExists() {
 
   try {
     // Drop the roles if they exist
-    await client.query('DROP ROLE IF EXISTS Guest');
-    await client.query('DROP ROLE IF EXISTS Employee');
-    await client.query('DROP ROLE IF EXISTS Admin');
-    await client.query('DROP ROLE IF EXISTS Customer');
+    await client.query('DROP ROLE IF EXISTS guest');
+    await client.query('DROP ROLE IF EXISTS employee');
+    await client.query('DROP ROLE IF EXISTS admin');
+    await client.query('DROP ROLE IF EXISTS customer');
 
-    console.log('Roles dropped successfully.');
+    console.log('--> Roles dropped successfully.');
   } catch (error) {
     console.error('Error dropping roles:', error);
   } finally {
@@ -56,26 +57,16 @@ async function createDatabase() {
   try {
     const dbExists = await databaseExists();
     if (dbExists) {
-      rl.question(
-        'The database already exists. Do you want to drop it and recreate? (y/N): ',
-        async (answer) => {
-          if (answer.toLowerCase() === 'y') {
-            await client.query('DROP DATABASE IF EXISTS course_project_db');
-            await client.query('CREATE DATABASE course_project_db');
-            await createRoles(client);
-            console.log('Database dropped and recreated successfully.');
-          } else {
-            console.log('Aborting creation.');
-          }
-          rl.close();
-        },
-      );
-    } else {
-      // Database creation
+      console.log('--> Dropping the DB');
+      await client.query('DROP DATABASE IF EXISTS course_project_db');
       await client.query('CREATE DATABASE course_project_db');
-      await createRoles(client);
-      console.log('Database created successfully.');
+      await console.log('--> Database dropped and recreated successfully.');
+    } else {
+      await client.query('CREATE DATABASE course_project_db');
+      console.log('--> Database created successfully.');
     }
+    execPrismaPush();
+    execPrismaSeed();
   } catch (error) {
     console.error('Error creating database and roles:', error);
   } finally {
@@ -83,26 +74,70 @@ async function createDatabase() {
   }
 }
 
-async function createRoles(client) {
-  // Roles creation
-  await client.query(
-    "CREATE ROLE Guest WITH LOGIN PASSWORD 'guest' NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
-  );
-  await client.query(
-    "CREATE ROLE Employee WITH LOGIN PASSWORD 'employee' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
-  );
-  await client.query(
-    "CREATE ROLE Admin WITH LOGIN PASSWORD 'admin' SUPERUSER CREATEDB CREATEROLE INHERIT REPLICATION CONNECTION LIMIT -1",
-  );
-  await client.query(
-    "CREATE ROLE Customer WITH LOGIN PASSWORD 'customer' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
-  );
-  console.log('Roles created successfully.');
+function execPrismaPush() {
+  console.log('--> Pushing Prisma Schema to the DB');
+  execSync('npx prisma db push');
+}
+
+function execPrismaSeed() {
+  console.log('--> Seeding the DB');
+  execSync('npx prisma db seed');
+}
+
+async function createRoles() {
+  console.log('--> Creating Roles');
+  await pool.end();
+
+  const newDbPool = new Pool({
+    user: 'postgres',
+    host: 'localhost',
+    database: 'course_project_db',
+    password: 'admin',
+    port: 5432,
+  });
+  const client = await newDbPool.connect();
+
+  try {
+    // Revoke default priviliges
+    await client.query('GRANT CREATE ON SCHEMA public TO PUBLIC');
+    await client.query('GRANT ALL ON DATABASE course_project_db TO PUBLIC');
+
+    // Create roles
+    await client.query(
+      "CREATE ROLE guest WITH LOGIN PASSWORD 'guest' NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
+    );
+
+    await client.query(
+      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users, users_id_seq TO guest',
+    );
+
+    await client.query('GRANT SELECT ON TABLE roles TO guest');
+
+    await client.query(
+      "CREATE ROLE employee WITH LOGIN PASSWORD 'employee' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
+    );
+    await client.query(
+      "CREATE ROLE admin WITH LOGIN PASSWORD 'admin' SUPERUSER CREATEDB CREATEROLE INHERIT REPLICATION CONNECTION LIMIT -1",
+    );
+    await client.query(
+      "CREATE ROLE customer WITH LOGIN PASSWORD 'customer' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
+    );
+
+    console.log('--> Roles created successfully');
+  } catch (error) {
+    console.error(error.message);
+  } finally {
+    client.release();
+    client.end();
+    await newDbPool.end();
+    process.exit();
+  }
 }
 
 async function setupDatabase() {
-  await dropRolesIfExists();
   await createDatabase();
+  await dropRolesIfExists();
+  await createRoles();
 }
 
 setupDatabase();
