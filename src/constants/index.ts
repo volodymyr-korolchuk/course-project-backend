@@ -5,4 +5,16 @@ export const CUSTOMER_PASSWORD = process.env.CUSTOMER_PASSWORD;
 export const EMPLOYEE_PASSWORD = process.env.EMPLOYEE_PASSWORD;
 export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-export const DB_ROLES = ['Guest', 'Customer', 'Employee', 'Admin'];
+export enum DB_ROLES {
+  Guest = 'guest',
+  Customer = 'customer',
+  Employee = 'employee',
+  Admin = 'admin',
+}
+
+export enum DB_ROLES_ID {
+  Guest = 1,
+  Customer,
+  Employee,
+  Admin,
+}

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -10,72 +11,83 @@ import {
   PrismaClientManager,
 } from 'src/manager/manager.service';
 import { PrismaClientUnknownRequestError } from '@prisma/client/runtime/library';
+import {
+  checkCustomerIdExists,
+  checkEmployeeIdExists,
+  checkLeasingIdExists,
+  checkVehicleIdExists,
+} from 'src/data/dbUtils';
 
 @Injectable()
 export class LeasingsService {
-  private client: ExtendedPrismaClient;
-
   constructor(private readonly manager: PrismaClientManager) {}
-
-  private async switchClient(tenantId: string) {
-    this.client = await this.manager.getClient(tenantId);
-    console.log('client switched to:', this.client.clientName);
-  }
 
   async create(tenantId: string, createLeasingDto: CreateLeasingDto) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.leasing.create({
+      const client = await this.manager.getClient(tenantId);
+
+      const vehicleExists = await checkVehicleIdExists(
+        client,
+        createLeasingDto.vehicleId,
+      );
+
+      if (!vehicleExists) {
+        throw new BadRequestException('Vehicle does not exist.');
+      }
+
+      const employeeExists = await checkEmployeeIdExists(
+        client,
+        createLeasingDto.createdByEmployeeId,
+      );
+
+      if (!employeeExists) {
+        throw new BadRequestException('Employee does not exist.');
+      }
+
+      const customerExists = await checkCustomerIdExists(
+        client,
+        createLeasingDto.customerId,
+      );
+
+      if (!customerExists) {
+        throw new BadRequestException('Customer does not exist.');
+      }
+
+      // forbid to put invalid dates on frontend. anyway, compare dates here.
+
+      const result = await client.leasing.create({
         data: createLeasingDto,
       });
 
       return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
   }
 
   async findAll(tenantId: string) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.leasing.findMany();
+      const client = await this.manager.getClient(tenantId);
+
+      const result = await client.leasing.findMany();
 
       return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
   }
 
   async findOne(tenantId: string, id: number) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.leasing.findUnique({
+      const client = await this.manager.getClient(tenantId);
+
+      return await client.leasing.findUnique({
         where: {
           id,
         },
       });
-
-      return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
   }
 
@@ -85,8 +97,44 @@ export class LeasingsService {
     updateLeasingDto: UpdateLeasingDto,
   ) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.leasing.update({
+      const client = await this.manager.getClient(tenantId);
+
+      if (updateLeasingDto?.vehicleId) {
+        const vehicleExists = await checkVehicleIdExists(
+          client,
+          updateLeasingDto.vehicleId,
+        );
+
+        if (!vehicleExists) {
+          throw new BadRequestException('Vehicle does not exist.');
+        }
+      }
+
+      if (updateLeasingDto?.createdByEmployeeId) {
+        const employeeExists = await checkEmployeeIdExists(
+          client,
+          updateLeasingDto.createdByEmployeeId,
+        );
+
+        if (!employeeExists) {
+          throw new BadRequestException('Employee does not exist.');
+        }
+      }
+
+      if (updateLeasingDto?.customerId) {
+        const customerExists = await checkCustomerIdExists(
+          client,
+          updateLeasingDto.customerId,
+        );
+
+        if (!customerExists) {
+          throw new BadRequestException('Customer does not exist.');
+        }
+      }
+
+      // also check dates here
+
+      const result = await client.leasing.update({
         where: {
           id,
         },
@@ -95,30 +143,33 @@ export class LeasingsService {
 
       return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
   }
 
   async remove(tenantId: string, id: number) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.leasing.delete({ where: { id } });
+      const client = await this.manager.getClient(tenantId);
+
+      const leasingExists = await checkLeasingIdExists(client, id);
+      if (!leasingExists) {
+        throw new BadRequestException('Leasing does not exist.');
+      }
+
+      const result = await client.leasing.delete({ where: { id } });
 
       return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
+  }
+
+  private handleError(error: any) {
+    if (error instanceof PrismaClientUnknownRequestError) {
+      throw new ForbiddenException(
+        'You don`t have permissions to perform such action.',
+      );
+    }
+    throw new InternalServerErrorException(error.message);
   }
 }

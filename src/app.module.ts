@@ -8,6 +8,7 @@ import { FleetModule } from './fleet/fleet.module';
 import { ConfigModule } from '@nestjs/config';
 import { ManagerModule } from './manager/manager.module';
 import { LeasingsModule } from './leasings/leasings.module';
+import { CustomersModule } from './customers/customers.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { LeasingsModule } from './leasings/leasings.module';
     FleetModule,
     ManagerModule,
     LeasingsModule,
+    CustomersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

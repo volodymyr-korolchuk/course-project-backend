@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { PrismaClient } from '@prisma/client';
+import { DB_ROLES } from '../src/constants/index';
 
-const ROLES = ['Guest', 'Customer', 'Employee', 'Admin'];
 const VEHICLE_CLASSES = [
   {
     title: 'SUV',
@@ -28,7 +28,7 @@ const VEHICLE_CLASSES = [
 export const INVOICE_STATUSES = ['closed', 'pending'];
 
 export function getRoles() {
-  return ROLES;
+  return Object.values(DB_ROLES);
 }
 
 export function getVehicleClasses() {
@@ -77,7 +77,7 @@ export async function generateCustomers(prisma: PrismaClient, amount: number) {
       userId: i + 1,
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
-      phoneNumber: faker.phone.number(),
+      phoneNumber: faker.phone.number().slice(0, 15),
     };
 
     customers.push(customer);
@@ -86,13 +86,8 @@ export async function generateCustomers(prisma: PrismaClient, amount: number) {
   return customers;
 }
 
-export function generatePositions() {
-  return ['Consultant', 'Admin'];
-}
-
-export async function generateStaff(prisma: PrismaClient, amount) {
+export async function generateStaff(amount: number) {
   const staff = [];
-  const positions = await prisma.position.findMany();
 
   for (let i = 0; i < amount; i++) {
     const employee = {
@@ -100,7 +95,6 @@ export async function generateStaff(prisma: PrismaClient, amount) {
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
       patronymic: faker.person.middleName(),
-      positionId: faker.number.int({ min: 1, max: positions.length }),
     };
 
     staff.push(employee);

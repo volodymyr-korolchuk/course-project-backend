@@ -8,6 +8,7 @@ export class LocalGuard extends AuthGuard('local') {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     console.log(`- [${new Date().toLocaleTimeString()}] Local guard.`);
+    console.log(context.switchToHttp().getRequest()?.user);
 
     return super.canActivate(context);
   }

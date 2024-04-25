@@ -110,7 +110,6 @@ async function createRoles() {
     await client.query(
       'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users, users_id_seq TO guest',
     );
-
     await client.query('GRANT SELECT ON TABLE roles TO guest');
 
     await client.query(
@@ -121,6 +120,9 @@ async function createRoles() {
     );
     await client.query(
       "CREATE ROLE customer WITH LOGIN PASSWORD 'customer' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
+    );
+    await client.query(
+      'GRANT SELECT ON TABLE users, users_id_seq, fleet TO customer',
     );
 
     console.log('--> Roles created successfully');

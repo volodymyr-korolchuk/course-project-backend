@@ -11,97 +11,72 @@ import {
   PrismaClientManager,
 } from 'src/manager/manager.service';
 import { PrismaClientUnknownRequestError } from '@prisma/client/runtime/library';
+import {
+  checkParkingLocationIdExists,
+  checkVehicleClassIdExists,
+  checkVehicleIdExists,
+  checkVehicleVrmExists,
+} from 'src/data/dbUtils';
 
 @Injectable()
 export class FleetService {
-  private client: ExtendedPrismaClient;
-
   constructor(private readonly manager: PrismaClientManager) {}
-
-  private async switchClient(tenantId: string) {
-    this.client = await this.manager.getClient(tenantId);
-    console.log('client switched to:', this.client.clientName);
-  }
 
   async create(tenantId: string, createVehicleDto: CreateVehicleDto) {
     try {
-      await this.switchClient(tenantId);
-      const existingVahicle = await this.client.fleet.findFirst({
-        where: {
-          vrm: createVehicleDto.vrm,
-        },
-      });
+      const client = await this.manager.getClient(tenantId);
+      const vehicleVrmExists = await checkVehicleVrmExists(
+        client,
+        createVehicleDto.vrm,
+      );
 
-      const isValidClassId = await this.client.vehicleClass.findUnique({
-        where: {
-          id: createVehicleDto.classId,
-        },
-      });
-
-      const isValidParkingLocationId =
-        await this.client.parkingLocation.findUnique({
-          where: {
-            id: createVehicleDto.parkingLocationId,
-          },
-        });
-
-      if (!isValidClassId) {
-        throw new BadRequestException('Vehicle class does not exists.');
-      }
-
-      if (!isValidParkingLocationId) {
-        throw new BadRequestException('Parking location does not exists.');
-      }
-
-      if (existingVahicle) {
+      if (vehicleVrmExists) {
         throw new BadRequestException('Vehicle with such vrm already exists.');
       }
 
-      const result = await this.client.fleet.create({ data: createVehicleDto });
+      const vehicleClassIdExists = await checkVehicleClassIdExists(
+        client,
+        createVehicleDto.classId,
+      );
+
+      if (!vehicleClassIdExists) {
+        throw new BadRequestException('Vehicle class does not exist.');
+      }
+
+      const parkingLocationIdExists = await checkParkingLocationIdExists(
+        client,
+        createVehicleDto.parkingLocationId,
+      );
+
+      if (!parkingLocationIdExists) {
+        throw new BadRequestException('Parking location does not exist.');
+      }
+
+      const result = await client.fleet.create({ data: createVehicleDto });
 
       return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
   }
 
   async findAll(tenantId: string) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.fleet.findMany();
+      const client = await this.manager.getClient(tenantId);
+      const result = await client.fleet.findMany();
 
       return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
   }
 
   async findOne(tenantId: string, id: number) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.fleet.findUnique({ where: { id } });
-
-      return result;
+      const client = await this.manager.getClient(tenantId);
+      return await client.fleet.findUnique({ where: { id } });
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
   }
 
@@ -111,8 +86,44 @@ export class FleetService {
     updateVehicleDto: UpdateVehicleDto,
   ) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.fleet.update({
+      const client = await this.manager.getClient(tenantId);
+
+      if (updateVehicleDto?.vrm) {
+        const vehicleVrmExists = await checkVehicleVrmExists(
+          client,
+          updateVehicleDto.vrm,
+        );
+
+        if (vehicleVrmExists) {
+          throw new BadRequestException(
+            'Vehicle with such vrm already exists.',
+          );
+        }
+      }
+
+      if (updateVehicleDto?.classId) {
+        const vehicleClassIdExists = await checkVehicleClassIdExists(
+          client,
+          updateVehicleDto.classId,
+        );
+
+        if (!vehicleClassIdExists) {
+          throw new BadRequestException('Vehicle class does not exist.');
+        }
+      }
+
+      if (updateVehicleDto?.parkingLocationId) {
+        const parkingLocationIdExists = await checkParkingLocationIdExists(
+          client,
+          updateVehicleDto.parkingLocationId,
+        );
+
+        if (!parkingLocationIdExists) {
+          throw new BadRequestException('Employee does not exist.');
+        }
+      }
+
+      const result = await client.fleet.update({
         where: {
           id,
         },
@@ -121,30 +132,35 @@ export class FleetService {
 
       return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
   }
 
   async remove(tenantId: string, id: number) {
     try {
-      await this.switchClient(tenantId);
-      const result = await this.client.fleet.delete({ where: { id } });
+      // before deleting any car, make sure that all leasings that
+      // have it`s id as vehicleId are deleted
+      const client = await this.manager.getClient(tenantId);
+
+      const vehicleIdExists = await checkVehicleIdExists(client, id);
+      if (!vehicleIdExists) {
+        throw new BadRequestException('Vehicle does not exist.');
+      }
+
+      const result = await client.fleet.delete({ where: { id } });
 
       return result;
     } catch (error) {
-      if (error instanceof PrismaClientUnknownRequestError) {
-        throw new ForbiddenException(
-          'You don`t have a permissions to perform such action.',
-        );
-      }
-
-      throw new InternalServerErrorException(error.message);
+      this.handleError(error);
     }
+  }
+
+  private handleError(error: any) {
+    if (error instanceof PrismaClientUnknownRequestError) {
+      throw new ForbiddenException(
+        'You don`t have permissions to perform such action.',
+      );
+    }
+    throw new InternalServerErrorException(error.message);
   }
 }

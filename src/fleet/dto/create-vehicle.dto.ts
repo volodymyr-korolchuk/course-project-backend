@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsString, Max, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  Max,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateVehicleDto {
   @IsNotEmpty()
@@ -12,6 +18,7 @@ export class CreateVehicleDto {
   model: string;
 
   @IsNotEmpty()
+  @IsNumber()
   productionYear: number;
 
   @IsNotEmpty()
@@ -20,9 +27,11 @@ export class CreateVehicleDto {
   color: string;
 
   @IsNotEmpty()
+  @IsNumber()
   classId: number;
 
   @IsNotEmpty()
+  @IsNumber()
   mileage: number;
 
   @IsNotEmpty()
@@ -31,5 +40,6 @@ export class CreateVehicleDto {
   vrm: string;
 
   @IsNotEmpty()
+  @IsNumber()
   parkingLocationId: number;
 }

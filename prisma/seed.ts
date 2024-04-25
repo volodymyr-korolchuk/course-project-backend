@@ -9,7 +9,6 @@ import {
   generateMaintenanceReports,
   generateParkingLocations,
   generatePayments,
-  generatePositions,
   generateSalaryPayments,
   generateStaff,
   generateUser,
@@ -17,6 +16,7 @@ import {
   getRoles,
 } from './seedingFunctions';
 import { faker } from '@faker-js/faker';
+import { DB_ROLES_ID } from '../src/constants/index';
 
 const prisma = new PrismaClient();
 
@@ -27,7 +27,6 @@ async function isDatabaseEmpty() {
       'User',
       'Customer',
       'Staff',
-      'Position',
       'SalaryPayment',
       'Fleet',
       'VehicleClass',
@@ -70,14 +69,9 @@ async function main() {
     await prisma.role.create({ data: { title: role } });
   }
 
-  const positions = generatePositions();
-  for (const position of positions) {
-    await prisma.position.create({ data: { title: position } });
-  }
-
-  const staff = await generateStaff(prisma, 10);
+  const staff = await generateStaff(10);
   for (const employee of staff) {
-    const roleId = faker.number.int({ min: 2, max: 3 });
+    const roleId = faker.number.int({ min: 3, max: 4 });
     await prisma.user.create({
       data: await generateUser(roleId),
     });
@@ -86,9 +80,8 @@ async function main() {
 
   const customers = await generateCustomers(prisma, 100);
   for (const customer of customers) {
-    const roleId = 1;
     await prisma.user.create({
-      data: await generateUser(roleId),
+      data: await generateUser(DB_ROLES_ID.Customer),
     });
     await prisma.customer.create({ data: customer });
   }
@@ -155,6 +148,7 @@ async function main() {
 main()
   .catch((err) => {
     console.log(err);
+    console.log(err.message);
     process.exit(1);
   })
   .finally(() => {

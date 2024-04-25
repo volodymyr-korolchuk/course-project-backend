@@ -1,41 +1,31 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import {
-  ExtendedPrismaClient,
-  PrismaClientManager,
-} from 'src/manager/manager.service';
+import { PrismaClientManager } from 'src/manager/manager.service';
+import { DB_ROLES, DB_ROLES_ID } from 'src/constants';
 
 @Injectable()
 export class AuthService {
-  private client: ExtendedPrismaClient;
-
   constructor(
     private readonly jwtService: JwtService,
     private readonly manager: PrismaClientManager,
-  ) {
-    const setupClient = async () => {
-      this.client = await this.manager.getClient('guest');
-
-      await this.client.$connect();
-      console.log(
-        'Auth: ',
-        this.client.clientName,
-        this.client.connectionString,
-      );
-    };
-
-    setupClient();
-  }
+  ) {}
 
   async validateUser(authDto: AuthDto) {
-    const existingUser = await this.client.user.findUnique({
+    const client = await this.manager.getClient(DB_ROLES.Guest);
+
+    const existingUser = await client.user.findUnique({
       where: { email: authDto.email },
     });
 
     if (!existingUser) {
-      return null;
+      throw new NotFoundException('User does not exist.');
     }
 
     const passwordsMatch = bcrypt.compare(
@@ -47,7 +37,7 @@ export class AuthService {
       return null;
     }
 
-    const userRole = await this.client.role.findUnique({
+    const userRole = await client.role.findUnique({
       where: { id: existingUser.roleId },
       select: {
         title: true,
@@ -62,7 +52,9 @@ export class AuthService {
   }
 
   async register(authDto: AuthDto) {
-    const existingUser = await this.client.user.findUnique({
+    const client = await this.manager.getClient(DB_ROLES.Guest);
+
+    const existingUser = await client.user.findUnique({
       where: { email: authDto.email },
     });
 
@@ -72,10 +64,10 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(authDto.password, 10);
 
-    await this.client.user.create({
+    await client.user.create({
       data: {
         email: authDto.email,
-        roleId: 1,
+        roleId: DB_ROLES_ID.Customer,
         hashedPassword: hashedPassword,
       },
     });
