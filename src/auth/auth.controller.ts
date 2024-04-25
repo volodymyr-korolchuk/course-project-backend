@@ -10,8 +10,8 @@ import {
 } from '@nestjs/common';
 import { AuthDto } from './dto/auth.dto';
 import { AuthService } from './auth.service';
-import { LocalGuard } from './guards/local.guard';
-import { JwtGuard } from './guards/jwt.guard';
+import { LocalGuard } from '../common/guards/local.guard';
+import { JwtGuard } from '../common/guards/jwt.guard';
 import { Request } from 'express';
 
 @Controller('auth')

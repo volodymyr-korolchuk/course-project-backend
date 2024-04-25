@@ -11,6 +11,7 @@ export class CreateVehicleDto {
   @MaxLength(64)
   model: string;
 
+  @IsNotEmpty()
   productionYear: number;
 
   @IsNotEmpty()
@@ -18,8 +19,10 @@ export class CreateVehicleDto {
   @MaxLength(32)
   color: string;
 
+  @IsNotEmpty()
   classId: number;
 
+  @IsNotEmpty()
   mileage: number;
 
   @IsNotEmpty()

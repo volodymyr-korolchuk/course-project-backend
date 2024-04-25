@@ -3,12 +3,11 @@ import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
 
 @Injectable()
-export class LocalGuard extends AuthGuard('local') {
+export class JwtGuard extends AuthGuard('jwt') {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    console.log(`[${new Date().toLocaleTimeString()}] Local guard run`);
-
+    console.log(`- [${new Date().toLocaleTimeString()}] Jwt guard.`);
     return super.canActivate(context);
   }
 }
