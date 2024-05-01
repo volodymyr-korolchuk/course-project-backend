@@ -4,7 +4,10 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JWT_SECRET } from 'src/constants';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+export class RefreshJwtStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

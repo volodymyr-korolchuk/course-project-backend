@@ -167,9 +167,10 @@ model MaintenanceReport {
 }
 
 model DamageReport {
-  id          Int    @id @default(autoincrement())
-  vehicleId   Int    @map("vehicle_id")
-  description String @db.VarChar(4096)
+  id           Int     @id @default(autoincrement())
+  vehicleId    Int     @map("vehicle_id")
+  description  String  @db.VarChar(4096)
+  estimatedSum Decimal @map("estimated_sum") @db.Decimal(10, 2)
 
   Vehicle Fleet @relation(fields: [vehicleId], references: [id])
 

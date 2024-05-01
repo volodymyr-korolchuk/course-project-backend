@@ -108,7 +108,7 @@ async function createRoles() {
     );
 
     await client.query(
-      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users, users_id_seq TO guest',
+      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE customers, staff, users, users_id_seq, customers_id_seq, staff_id_seq TO guest',
     );
     await client.query('GRANT SELECT ON TABLE roles TO guest');
 

@@ -7,11 +7,13 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { AuthDto } from './dto/auth.dto';
+import { RegisterDto } from './dto/register.dto';
 import { AuthService } from './auth.service';
 import { LocalGuard } from '../common/guards/local.guard';
 import { JwtGuard } from '../common/guards/jwt.guard';
 import { Request } from 'express';
+import { RefreshJwtGuard } from 'src/common/guards/refresh-jwt.guard';
+import { RefreshDto } from './dto/refresh.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -25,8 +27,14 @@ export class AuthController {
   }
 
   @Post('register')
-  register(@Body() authDto: AuthDto) {
-    return this.authService.register(authDto);
+  register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
+  }
+
+  @Post('refresh')
+  @UseGuards(RefreshJwtGuard)
+  refresh(@Req() req: Request) {
+    return this.authService.refresh(req.user as RefreshDto);
   }
 
   @Get('status')

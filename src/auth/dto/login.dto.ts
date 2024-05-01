@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
-export class AuthDto {
+export class LoginDto {
   @IsNotEmpty()
   @IsString()
   @MaxLength(63)

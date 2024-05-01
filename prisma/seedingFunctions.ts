@@ -322,6 +322,7 @@ export async function generateDamageReports(prisma: PrismaClient) {
     const report = {
       vehicleId: faker.number.int({ min: 1, max: fleet.length }),
       description: faker.lorem.sentences(15),
+      estimatedSum: faker.number.float({ min: 200, max: 12000 }),
     };
 
     reports.push(report);

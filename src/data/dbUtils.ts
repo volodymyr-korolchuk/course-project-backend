@@ -61,3 +61,37 @@ export async function checkEmployeeIdExists(client: PrismaClient, id: number) {
     },
   }));
 }
+
+export async function getUserByEmail(client: PrismaClient, email: string) {
+  return await client.user.findUnique({
+    where: {
+      email,
+    },
+  });
+}
+
+export async function getCustomerByUserId(client: PrismaClient, id: number) {
+  return await client.customer.findUnique({
+    where: {
+      userId: id,
+    },
+  });
+}
+
+export async function getEmployeeByUserId(client: PrismaClient, id: number) {
+  return await client.staff.findUnique({
+    where: {
+      userId: id,
+    },
+  });
+}
+
+export async function getRoleTitleById(client: PrismaClient, id: number) {
+  const role = await client.role.findUnique({
+    where: { id },
+    select: {
+      title: true,
+    },
+  });
+  return role.title;
+}

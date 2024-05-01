@@ -6,10 +6,7 @@ import {
 } from '@nestjs/common';
 import { CreateLeasingDto } from './dto/create-leasing.dto';
 import { UpdateLeasingDto } from './dto/update-leasing.dto';
-import {
-  ExtendedPrismaClient,
-  PrismaClientManager,
-} from 'src/manager/manager.service';
+import { PrismaClientManager } from 'src/manager/manager.service';
 import { PrismaClientUnknownRequestError } from '@prisma/client/runtime/library';
 import {
   checkCustomerIdExists,

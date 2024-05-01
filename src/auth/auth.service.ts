@@ -1,75 +1,113 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { AuthDto } from './dto/auth.dto';
-import * as bcrypt from 'bcrypt';
+import { RegisterDto } from './dto/register.dto';
+import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClientManager } from 'src/manager/manager.service';
+import {
+  ExtendedPrismaClient,
+  PrismaClientManager,
+} from 'src/manager/manager.service';
 import { DB_ROLES, DB_ROLES_ID } from 'src/constants';
+import { LoginDto } from './dto/login.dto';
+import {
+  getCustomerByUserId,
+  getEmployeeByUserId,
+  getRoleTitleById,
+  getUserByEmail,
+} from 'src/data/dbUtils';
+import { RefreshDto } from './dto/refresh.dto';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
+  private client: ExtendedPrismaClient = null;
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly manager: PrismaClientManager,
-  ) {}
+  ) {
+    const setupClient = async () => {
+      this.client = await this.manager.getClient(DB_ROLES.Guest);
+    };
 
-  async validateUser(authDto: AuthDto) {
-    const client = await this.manager.getClient(DB_ROLES.Guest);
-
-    const existingUser = await client.user.findUnique({
-      where: { email: authDto.email },
-    });
-
-    if (!existingUser) {
-      throw new NotFoundException('User does not exist.');
-    }
-
-    const passwordsMatch = bcrypt.compare(
-      authDto.password,
-      existingUser.hashedPassword,
-    );
-
-    if (!passwordsMatch) {
-      return null;
-    }
-
-    const userRole = await client.role.findUnique({
-      where: { id: existingUser.roleId },
-      select: {
-        title: true,
-      },
-    });
-    const { hashedPassword, roleId, ...user } = existingUser;
-
-    return await this.jwtService.sign({
-      ...user,
-      role: userRole.title,
-    });
+    setupClient();
   }
 
-  async register(authDto: AuthDto) {
-    const client = await this.manager.getClient(DB_ROLES.Guest);
+  async validateUser(authDto: LoginDto) {
+    const userRaw = await this.getUserRaw(authDto);
+    await this.comparePasswords(authDto.password, userRaw.hashedPassword);
 
-    const existingUser = await client.user.findUnique({
-      where: { email: authDto.email },
+    const user = {
+      ...(await this.getAccount(userRaw)),
+      role: await getRoleTitleById(this.client, userRaw.roleId),
+    };
+
+    const accessToken = await this.jwtService.sign(user);
+    const refreshToken = await this.jwtService.sign(user, { expiresIn: '7d' });
+
+    return { user, accessToken, refreshToken };
+  }
+
+  async refresh(refreshDto: RefreshDto) {
+    const { iat, exp, ...user } = refreshDto;
+    const accessToken = await this.jwtService.sign(user);
+
+    return { user, accessToken };
+  }
+
+  async register(registerDto: RegisterDto) {
+    const existingUser = await this.client.user.findUnique({
+      where: { email: registerDto.email },
     });
 
     if (existingUser) {
       throw new BadRequestException('User with such email already exists.');
     }
 
-    const hashedPassword = await bcrypt.hash(authDto.password, 10);
+    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    await client.user.create({
+    const user = await this.client.user.create({
       data: {
-        email: authDto.email,
+        email: registerDto.email,
         roleId: DB_ROLES_ID.Customer,
         hashedPassword: hashedPassword,
       },
     });
+
+    await this.client.customer.create({
+      data: {
+        userId: user.id,
+        firstName: registerDto.firstName,
+        lastName: registerDto.lastName,
+        phoneNumber: registerDto.phoneNumber,
+      },
+    });
+  }
+
+  private async comparePasswords(data: string, hash: string) {
+    const match = await bcrypt.compare(data, hash);
+    if (!match) {
+      throw new UnauthorizedException('Invalid credentials.');
+    }
+  }
+
+  private async getUserRaw(authDto: LoginDto) {
+    const user = await getUserByEmail(this.client, authDto.email);
+    if (!user) {
+      throw new NotFoundException('User does not exist.');
+    }
+    return user;
+  }
+
+  private async getAccount(user) {
+    const customer = await getCustomerByUserId(this.client, user.id);
+    const employee = await getEmployeeByUserId(this.client, user.id);
+
+    const { firstName, lastName } = customer || employee;
+    return { firstName, lastName, email: user.email };
   }
 }
