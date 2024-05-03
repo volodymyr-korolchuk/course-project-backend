@@ -368,7 +368,6 @@ export async function generateFinanceAnalytics(prisma: PrismaClient) {
   for (let i = 0; i < diffInMonths; i++) {
     const analytics = {
       leasingsIncome: faker.number.int({ min: 10000, max: 50000 }),
-      salariesPaid: faker.number.int({ min: 8000, max: 15000 }),
       taxesPaid: faker.number.int({ min: 1000, max: 7000 }),
       maintenanceExpenses: faker.number.int({ min: 200, max: 5000 }),
       fuelExpenses: faker.number.int({ min: 800, max: 2000 }),
