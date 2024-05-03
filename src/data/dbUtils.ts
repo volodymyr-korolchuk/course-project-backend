@@ -54,6 +54,14 @@ export async function checkLeasingIdExists(client: PrismaClient, id: number) {
   }));
 }
 
+export async function checkUserIdExists(client: PrismaClient, id: number) {
+  return !!(await client.user.findUnique({
+    where: {
+      id,
+    },
+  }));
+}
+
 export async function checkEmployeeIdExists(client: PrismaClient, id: number) {
   return !!(await client.staff.findUnique({
     where: {
@@ -95,3 +103,8 @@ export async function getRoleTitleById(client: PrismaClient, id: number) {
   });
   return role.title;
 }
+
+export const getTodaysPickupsQuery = '';
+export const getTodaysReturnsQuery = '';
+export const getTomorrowsPickupsQuery = '';
+export const getTomorrowsReturnsQuery = '';

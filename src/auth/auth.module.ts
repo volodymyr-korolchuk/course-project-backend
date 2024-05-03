@@ -14,7 +14,7 @@ import { RefreshJwtStrategy } from './strategies/refresh-jwt.strategy';
     JwtModule.register({
       secret: JWT_SECRET,
       signOptions: {
-        expiresIn: '5m',
+        expiresIn: '3h',
       },
     }),
   ],

@@ -86,7 +86,6 @@ function execPrismaSeed() {
 
 async function createRoles() {
   console.log('--> Creating Roles');
-  await pool.end();
 
   const newDbPool = new Pool({
     user: 'postgres',
@@ -98,7 +97,6 @@ async function createRoles() {
   const client = await newDbPool.connect();
 
   try {
-    // Revoke default priviliges
     await client.query('GRANT CREATE ON SCHEMA public TO PUBLIC');
     await client.query('GRANT ALL ON DATABASE course_project_db TO PUBLIC');
 
@@ -106,11 +104,6 @@ async function createRoles() {
     await client.query(
       "CREATE ROLE guest WITH LOGIN PASSWORD 'guest' NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
     );
-
-    await client.query(
-      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE customers, staff, users, users_id_seq, customers_id_seq, staff_id_seq TO guest',
-    );
-    await client.query('GRANT SELECT ON TABLE roles TO guest');
 
     await client.query(
       "CREATE ROLE employee WITH LOGIN PASSWORD 'employee' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
@@ -121,8 +114,22 @@ async function createRoles() {
     await client.query(
       "CREATE ROLE customer WITH LOGIN PASSWORD 'customer' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT NOREPLICATION CONNECTION LIMIT -1",
     );
+
+    // modify these
+    await client.query('GRANT SELECT ON TABLE roles TO guest');
     await client.query(
-      'GRANT SELECT ON TABLE users, users_id_seq, fleet TO customer',
+      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE customers, staff, users, users_id_seq, customers_id_seq, staff_id_seq TO guest',
+    );
+    await client.query(
+      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE customers, staff, users, leasings, invoices, payments, users_id_seq, customers_id_seq, staff_id_seq, leasings_id_seq, invoices_id_seq, payments_id_seq TO customer',
+    );
+
+    await client.query(
+      'GRANT SELECT ON TABLE users, users_id_seq, fleet, fleet_id_seq, vehicle_classes, vehicle_classes_id_seq, parking_locations TO customer',
+    );
+
+    await client.query(
+      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE fleet, customers, vehicle_classes, staff, users, leasings, invoices, payments, parking_locations, users_id_seq, customers_id_seq, staff_id_seq, leasings_id_seq, vehicle_classes_id_seq, fleet_id_seq, invoices_id_seq, payments_id_seq, parking_locations_id_seq TO employee',
     );
 
     console.log('--> Roles created successfully');
@@ -131,8 +138,186 @@ async function createRoles() {
   } finally {
     client.release();
     client.end();
-    await newDbPool.end();
-    process.exit();
+  }
+}
+
+async function createFunctions() {
+  console.log('--> Creating Functions and Triggers');
+
+  const newDbPool = new Pool({
+    user: 'postgres',
+    host: 'localhost',
+    database: 'course_project_db',
+    password: 'admin',
+    port: 5432,
+  });
+  const client = await newDbPool.connect();
+
+  try {
+    await client.query(`
+    CREATE OR REPLACE FUNCTION getTomorrowsPickups()
+    RETURNS TABLE (
+        id INT,
+        vehicleId INT,
+        createdByEmployeeId INT,
+        customerId INT,
+        pickupDate TIMESTAMP,
+        returnDate TIMESTAMP,
+        allowedMileage INT
+    )
+    AS $$
+    BEGIN
+        RETURN QUERY
+        SELECT
+            l.id,
+            l.vehicle_id,
+            l.created_by_employee_id,
+            l.customer_id,
+            l.pickup_date,
+            l.return_date,
+            l.allowed_mileage
+        FROM
+            leasings l
+        WHERE
+            DATE(l.pickup_date) = CURRENT_DATE + INTERVAL '1 day';
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+    await client.query(`
+    CREATE OR REPLACE FUNCTION getTodaysPickups()
+    RETURNS TABLE (
+        id INT,
+        vehicleId INT,
+        createdByEmployeeId INT,
+        customerId INT,
+        pickupDate TIMESTAMP,
+        returnDate TIMESTAMP,
+        allowedMileage INT
+    )
+    AS $$
+    BEGIN
+        RETURN QUERY
+        SELECT
+            l.id,
+            l.vehicle_id,
+            l.created_by_employee_id,
+            l.customer_id,
+            l.pickup_date,
+            l.return_date,
+            l.allowed_mileage
+        FROM
+            leasings l
+        WHERE
+            DATE(l.pickup_date) = CURRENT_DATE;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+    await client.query(`
+    CREATE OR REPLACE FUNCTION getTodaysReturns()
+    RETURNS TABLE (
+        id INT,
+        vehicleId INT,
+        createdByEmployeeId INT,
+        customerId INT,
+        pickupDate TIMESTAMP,
+        returnDate TIMESTAMP,
+        allowedMileage INT
+    )
+    AS $$
+    BEGIN
+        RETURN QUERY
+        SELECT
+            l.id,
+            l.vehicle_id,
+            l.created_by_employee_id,
+            l.customer_id,
+            l.pickup_date,
+            l.return_date,
+            l.allowed_mileage
+        FROM
+            leasings l
+        WHERE
+            DATE(l.return_date) = CURRENT_DATE;
+    END;
+    $$ LANGUAGE plpgsql;    
+  `);
+
+    await client.query(`
+      CREATE OR REPLACE FUNCTION getTomorrowsReturns()
+      RETURNS TABLE (
+          id INT,
+          vehicleId INT,
+          createdByEmployeeId INT,
+          customerId INT,
+          pickupDate TIMESTAMP,
+          returnDate TIMESTAMP,
+          allowedMileage INT
+      )
+      AS $$
+      BEGIN
+          RETURN QUERY
+          SELECT
+              l.id,
+              l.vehicle_id,
+              l.created_by_employee_id,
+              l.customer_id,
+              l.pickup_date,
+              l.return_date,
+              l.allowed_mileage
+          FROM
+              leasings l
+          WHERE
+              DATE(l.return_date) = CURRENT_DATE + INTERVAL '1 day';
+      END;
+      $$ LANGUAGE plpgsql;    
+    `);
+
+    await client.query(`
+      CREATE OR REPLACE FUNCTION remove_rentals_before_vehicle_removal()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          DELETE FROM leasings WHERE vehicle_id = OLD.id;
+          RETURN OLD;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER remove_rentals_trigger
+      BEFORE DELETE ON fleet
+      FOR EACH ROW
+      EXECUTE FUNCTION remove_rentals_before_vehicle_removal();
+    `);
+
+    // await client.query(`
+    //   CREATE OR REPLACE FUNCTION remove_payment_and_invoice()
+    //   RETURNS TRIGGER AS $$
+    //   DECLARE
+    //     to_remove_invoice_id INT;
+    //     to_remove_payment_id INT;
+    //   BEGIN
+    //       SELECT id INTO to_remove_invoice_id FROM invoices WHERE leasing_id = OLD.id;
+    //       SELECT id INTO to_remove_payment_id FROM payments WHERE invoice_id = to_remove_invoice_id;
+
+    //       DELETE FROM payments WHERE id = to_remove_payment_id;
+    //       DELETE FROM invoices WHERE id = to_remove_invoice_id;
+
+    //       RETURN OLD;
+    //   END;
+    //   $$ LANGUAGE plpgsql;
+
+    //   CREATE TRIGGER remove_payment_and_invoice_trigger
+    //   BEFORE DELETE ON leasings
+    //   EXECUTE FUNCTION remove_payment_and_invoice();
+    // `);
+
+    console.log('--> Functions created successfully');
+  } catch (error) {
+    console.error(error.message);
+  } finally {
+    client.release();
+    client.end();
+    newDbPool.end();
   }
 }
 
@@ -140,6 +325,8 @@ async function setupDatabase() {
   await createDatabase();
   await dropRolesIfExists();
   await createRoles();
+  await createFunctions();
+  process.exit();
 }
 
 setupDatabase();

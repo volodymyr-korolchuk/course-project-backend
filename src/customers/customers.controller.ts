@@ -22,17 +22,8 @@ import { JwtGuard } from 'src/common/guards/jwt.guard';
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
-  @Post()
-  @Roles([DB_ROLES.Employee])
-  create(
-    @TenantId() tenantId: string,
-    @Body() createCustomerDto: CreateCustomerDto,
-  ) {
-    return this.customersService.create(tenantId, createCustomerDto);
-  }
-
   @Get()
-  @Roles([DB_ROLES.Employee])
+  @Roles([DB_ROLES.Employee, DB_ROLES.Customer])
   findAll(@TenantId() tenantId: string) {
     return this.customersService.findAll(tenantId);
   }

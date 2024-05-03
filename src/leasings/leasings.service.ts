@@ -13,6 +13,10 @@ import {
   checkEmployeeIdExists,
   checkLeasingIdExists,
   checkVehicleIdExists,
+  getTodaysPickupsQuery,
+  getTodaysReturnsQuery,
+  getTomorrowsPickupsQuery,
+  getTomorrowsReturnsQuery,
 } from 'src/data/dbUtils';
 
 @Injectable()
@@ -66,11 +70,62 @@ export class LeasingsService {
     try {
       const client = await this.manager.getClient(tenantId);
 
-      const result = await client.leasing.findMany();
+      // Modify the query to include all necessary fields
+      const result = await client.leasing.findMany({
+        select: {
+          id: true,
+          pickupDate: true,
+          returnDate: true,
+          Customer: {
+            select: {
+              User: {
+                select: {
+                  email: true,
+                },
+              },
+            },
+          },
+          Vehicle: {
+            select: {
+              id: true,
+              make: true,
+              model: true,
+              VehicleClass: {
+                select: {
+                  title: true,
+                },
+              },
+              ParkingLocation: {
+                select: {
+                  address: true,
+                },
+              },
+            },
+          },
 
-      return result;
+          Invoice: {
+            select: {
+              amountDue: true,
+            },
+          },
+        },
+      });
+
+      const leasings = result.map((leasing) => ({
+        id: leasing.id,
+        email: leasing.Customer.User.email,
+        pickupDate: leasing.pickupDate.toLocaleString(),
+        returnDate: leasing.returnDate.toLocaleString(),
+        pickupLocation: leasing.Vehicle.ParkingLocation.address,
+        vehicleClass: leasing.Vehicle.VehicleClass.title,
+        vehicle: `${leasing.Vehicle.make} ${leasing.Vehicle.model}`,
+        amountDue: leasing.Invoice.amountDue,
+      }));
+
+      return leasings;
     } catch (error) {
-      this.handleError(error);
+      console.error(error);
+      throw new Error('Failed to fetch leasings');
     }
   }
 
@@ -82,6 +137,325 @@ export class LeasingsService {
         where: {
           id,
         },
+        select: {
+          id: true,
+          pickupDate: true,
+          returnDate: true,
+          Customer: {
+            select: {
+              User: {
+                select: {
+                  email: true,
+                },
+              },
+            },
+          },
+          Vehicle: {
+            select: {
+              id: true,
+              make: true,
+              model: true,
+              VehicleClass: {
+                select: {
+                  title: true,
+                },
+              },
+              ParkingLocation: {
+                select: {
+                  address: true,
+                },
+              },
+            },
+          },
+
+          Invoice: {
+            select: {
+              amountDue: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async findTodaysPickups(tenantId: string) {
+    try {
+      const client = await this.manager.getClient(tenantId);
+
+      const today = new Date();
+      const todayDateString = today.toISOString().slice(0, 10);
+
+      // Retrieve leasings with pickupDate set to today's date
+      const pickups = await client.leasing.findMany({
+        where: {
+          pickupDate: {
+            gte: new Date(todayDateString),
+            lt: new Date(todayDateString + 'T23:59:59.999Z'),
+          },
+        },
+        select: {
+          id: true,
+          pickupDate: true,
+          returnDate: true,
+          Customer: {
+            select: {
+              User: {
+                select: {
+                  email: true,
+                },
+              },
+            },
+          },
+          Vehicle: {
+            select: {
+              id: true,
+              make: true,
+              model: true,
+              VehicleClass: {
+                select: {
+                  title: true,
+                },
+              },
+              ParkingLocation: {
+                select: {
+                  address: true,
+                },
+              },
+            },
+          },
+
+          Invoice: {
+            select: {
+              amountDue: true,
+            },
+          },
+        },
+      });
+
+      return pickups.map((item) => {
+        return {
+          id: item.id,
+          email: item.Customer.User.email,
+          pickupDate: item.pickupDate.toLocaleString(),
+          returnDate: item.returnDate.toLocaleString(),
+          pickupLocation: item.Vehicle.ParkingLocation.address,
+          vehicleClass: item.Vehicle.VehicleClass.title,
+          vehicle: `${item.Vehicle.make} ${item.Vehicle.model}`,
+          amountDue: item.Invoice.amountDue,
+        };
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async findTodaysReturns(tenantId: string) {
+    try {
+      const client = await this.manager.getClient(tenantId);
+
+      const today = new Date();
+      const todayDateString = today.toISOString().slice(0, 10);
+
+      const returns = await client.leasing.findMany({
+        where: {
+          returnDate: {
+            gte: new Date(todayDateString),
+            lt: new Date(todayDateString + 'T23:59:59.999Z'), // Ensure it's within the entire day
+          },
+        },
+        select: {
+          id: true,
+          pickupDate: true,
+          returnDate: true,
+          Customer: {
+            select: {
+              User: {
+                select: {
+                  email: true,
+                },
+              },
+            },
+          },
+          Vehicle: {
+            select: {
+              id: true,
+              make: true,
+              model: true,
+              VehicleClass: {
+                select: {
+                  title: true,
+                },
+              },
+              ParkingLocation: {
+                select: {
+                  address: true,
+                },
+              },
+            },
+          },
+
+          Invoice: {
+            select: {
+              amountDue: true,
+            },
+          },
+        },
+      });
+
+      return returns.map((item) => {
+        return {
+          id: item.id,
+          email: item.Customer.User.email,
+          pickupDate: item.pickupDate.toLocaleString(),
+          returnDate: item.returnDate.toLocaleString(),
+          pickupLocation: item.Vehicle.ParkingLocation.address,
+          vehicleClass: item.Vehicle.VehicleClass.title,
+          vehicle: `${item.Vehicle.make} ${item.Vehicle.model}`,
+          amountDue: item.Invoice.amountDue,
+        };
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async findTomorrowsPickups(tenantId: string) {
+    try {
+      const client = await this.manager.getClient(tenantId);
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowDateString = tomorrow.toISOString().slice(0, 10);
+
+      const rentals = await client.leasing.findMany({
+        where: {
+          pickupDate: {
+            gte: new Date(tomorrowDateString),
+            lt: new Date(tomorrowDateString + 'T23:59:59.999Z'), // Ensure it's within the entire day
+          },
+        },
+        select: {
+          id: true,
+          pickupDate: true,
+          returnDate: true,
+          Customer: {
+            select: {
+              User: {
+                select: {
+                  email: true,
+                },
+              },
+            },
+          },
+          Vehicle: {
+            select: {
+              id: true,
+              make: true,
+              model: true,
+              VehicleClass: {
+                select: {
+                  title: true,
+                },
+              },
+              ParkingLocation: {
+                select: {
+                  address: true,
+                },
+              },
+            },
+          },
+
+          Invoice: {
+            select: {
+              amountDue: true,
+            },
+          },
+        },
+      });
+
+      return rentals.map((item) => {
+        return {
+          id: item.id,
+          email: item.Customer.User.email,
+          pickupDate: item.pickupDate.toLocaleString(),
+          returnDate: item.returnDate.toLocaleString(),
+          pickupLocation: item.Vehicle.ParkingLocation.address,
+          vehicleClass: item.Vehicle.VehicleClass.title,
+          vehicle: `${item.Vehicle.make} ${item.Vehicle.model}`,
+          amountDue: item.Invoice.amountDue,
+        };
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async findTomorrowsReturns(tenantId: string) {
+    try {
+      const client = await this.manager.getClient(tenantId);
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowDateString = tomorrow.toISOString().slice(0, 10);
+
+      const returns = await client.leasing.findMany({
+        where: {
+          returnDate: {
+            gte: new Date(tomorrowDateString),
+            lt: new Date(tomorrowDateString + 'T23:59:59.999Z'), // Ensure it's within the entire day
+          },
+        },
+        select: {
+          id: true,
+          pickupDate: true,
+          returnDate: true,
+          Customer: {
+            select: {
+              User: {
+                select: {
+                  email: true,
+                },
+              },
+            },
+          },
+          Vehicle: {
+            select: {
+              id: true,
+              make: true,
+              model: true,
+              VehicleClass: {
+                select: {
+                  title: true,
+                },
+              },
+              ParkingLocation: {
+                select: {
+                  address: true,
+                },
+              },
+            },
+          },
+
+          Invoice: {
+            select: {
+              amountDue: true,
+            },
+          },
+        },
+      });
+
+      return returns.map((item) => {
+        return {
+          id: item.id,
+          email: item.Customer.User.email,
+          pickupDate: item.pickupDate.toLocaleString(),
+          returnDate: item.returnDate.toLocaleString(),
+          pickupLocation: item.Vehicle.ParkingLocation.address,
+          vehicleClass: item.Vehicle.VehicleClass.title,
+          vehicle: `${item.Vehicle.make} ${item.Vehicle.model}`,
+          amountDue: item.Invoice.amountDue,
+        };
       });
     } catch (error) {
       this.handleError(error);

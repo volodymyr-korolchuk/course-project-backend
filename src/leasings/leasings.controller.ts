@@ -23,6 +23,7 @@ export class LeasingsController {
   constructor(private readonly leasingsService: LeasingsService) {}
 
   @Post()
+  @Roles([DB_ROLES.Customer, DB_ROLES.Employee])
   create(
     @TenantId() tenantId: string,
     @Body() createLeasingDto: CreateLeasingDto,
@@ -36,12 +37,37 @@ export class LeasingsController {
     return this.leasingsService.findAll(tenantId);
   }
 
+  @Get('todays-pickups')
+  @Roles([DB_ROLES.Employee])
+  findTodaysPickups(@TenantId() tenantId) {
+    return this.leasingsService.findTodaysPickups(tenantId);
+  }
+  @Get('todays-returns')
+  @Roles([DB_ROLES.Employee])
+  findTodaysReturns(@TenantId() tenantId) {
+    return this.leasingsService.findTodaysReturns(tenantId);
+  }
+
+  @Get('tomorrows-pickups')
+  @Roles([DB_ROLES.Employee])
+  findTomorrowsPickups(@TenantId() tenantId) {
+    return this.leasingsService.findTomorrowsPickups(tenantId);
+  }
+
+  @Get('tomorrows-returns')
+  @Roles([DB_ROLES.Employee])
+  findTomorrowsReturns(@TenantId() tenantId) {
+    return this.leasingsService.findTomorrowsReturns(tenantId);
+  }
+
   @Get(':id')
+  @Roles([DB_ROLES.Customer, DB_ROLES.Employee])
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.leasingsService.findOne(tenantId, +id);
   }
 
   @Patch(':id')
+  @Roles([DB_ROLES.Employee])
   update(
     @TenantId() tenantId: string,
     @Param('id') id: string,
@@ -51,6 +77,7 @@ export class LeasingsController {
   }
 
   @Delete(':id')
+  @Roles([DB_ROLES.Employee])
   remove(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.leasingsService.remove(tenantId, +id);
   }

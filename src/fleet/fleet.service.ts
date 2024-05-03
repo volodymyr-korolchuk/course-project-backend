@@ -63,7 +63,21 @@ export class FleetService {
   async findAll(tenantId: string) {
     try {
       const client = await this.manager.getClient(tenantId);
-      const result = await client.fleet.findMany();
+      const result = await client.fleet.findMany({
+        include: {
+          VehicleClass: {
+            select: {
+              title: true,
+              pricePerHour: true,
+            },
+          },
+          ParkingLocation: {
+            select: {
+              address: true,
+            },
+          },
+        },
+      });
 
       return result;
     } catch (error) {
@@ -74,7 +88,22 @@ export class FleetService {
   async findOne(tenantId: string, id: number) {
     try {
       const client = await this.manager.getClient(tenantId);
-      return await client.fleet.findUnique({ where: { id } });
+      return await client.fleet.findUnique({
+        where: { id },
+        include: {
+          VehicleClass: {
+            select: {
+              title: true,
+              pricePerHour: true,
+            },
+          },
+          ParkingLocation: {
+            select: {
+              address: true,
+            },
+          },
+        },
+      });
     } catch (error) {
       this.handleError(error);
     }
@@ -147,9 +176,7 @@ export class FleetService {
         throw new BadRequestException('Vehicle does not exist.');
       }
 
-      const result = await client.fleet.delete({ where: { id } });
-
-      return result;
+      await client.fleet.delete({ where: { id } });
     } catch (error) {
       this.handleError(error);
     }
@@ -157,6 +184,8 @@ export class FleetService {
 
   private handleError(error: any) {
     if (error instanceof PrismaClientUnknownRequestError) {
+      console.error(error.message);
+
       throw new ForbiddenException(
         'You don`t have permissions to perform such action.',
       );

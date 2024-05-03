@@ -49,27 +49,15 @@ model Customer {
 }
 
 model Staff {
-  id         Int    @id @default(autoincrement())
-  userId     Int    @unique @map("user_id")
-  firstName  String @map("first_name") @db.VarChar(128)
-  lastName   String @map("last_name") @db.VarChar(128)
-  patronymic String @db.VarChar(128)
+  id        Int    @id @default(autoincrement())
+  userId    Int    @unique @map("user_id")
+  firstName String @map("first_name") @db.VarChar(128)
+  lastName  String @map("last_name") @db.VarChar(128)
 
-  User           User            @relation(fields: [userId], references: [id])
-  SalaryPayments SalaryPayment[]
-  Leasings       Leasing[]
+  User     User      @relation(fields: [userId], references: [id])
+  Leasings Leasing[]
 
   @@map("staff")
-}
-
-model SalaryPayment {
-  id          Int     @id @default(autoincrement())
-  employeeId  Int     @map("employee_id")
-  totalAmount Decimal @map("total_amount") @db.Decimal(10, 2)
-
-  Employee Staff @relation(fields: [employeeId], references: [id])
-
-  @@map("salary_payments")
 }
 
 model Fleet {
@@ -134,7 +122,6 @@ model Invoice {
   leasingId       Int     @unique @map("leasing_id")
   amountDue       Decimal @map("amount_due") @db.Decimal(10, 2)
   insuranceAmount Decimal @map("insurance_amount") @db.Decimal(10, 2)
-  status          String  @db.VarChar(32)
 
   Leasing Leasing  @relation(fields: [leasingId], references: [id])
   Payment Payment?
@@ -180,7 +167,6 @@ model DamageReport {
 model MonthlyAnalytics {
   id                  Int      @id @default(autoincrement())
   leasingsIncome      Decimal  @map("leasings_income") @db.Decimal(10, 2)
-  salariesPaid        Decimal  @map("salaries_paid") @db.Decimal(10, 2)
   taxesPaid           Decimal  @map("taxes_paid") @db.Decimal(10, 2)
   maintenanceExpenses Decimal  @map("maintenance_expenses") @db.Decimal(10, 2)
   fuelExpenses        Decimal  @map("fuel_expenses") @db.Decimal(10, 2)

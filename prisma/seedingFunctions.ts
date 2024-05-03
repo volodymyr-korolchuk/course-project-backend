@@ -5,23 +5,23 @@ import { DB_ROLES } from '../src/constants/index';
 const VEHICLE_CLASSES = [
   {
     title: 'SUV',
-    pricePerHour: 160,
+    pricePerHour: 20,
   },
   {
     title: 'Sedan',
-    pricePerHour: 150,
+    pricePerHour: 15,
   },
   {
     title: 'Van',
-    pricePerHour: 190,
+    pricePerHour: 30,
   },
   {
     title: 'Hatchback',
-    pricePerHour: 100,
+    pricePerHour: 20,
   },
   {
     title: 'Minivan',
-    pricePerHour: 170,
+    pricePerHour: 25,
   },
 ];
 
@@ -94,7 +94,6 @@ export async function generateStaff(amount: number) {
       userId: i + 1,
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
-      patronymic: faker.person.middleName(),
     };
 
     staff.push(employee);
@@ -169,30 +168,23 @@ export async function generateFleet(prisma: PrismaClient, amount: number) {
   return fleet;
 }
 
-export async function generateLeasings(prisma: PrismaClient) {
+export async function generateLeasings(prisma: PrismaClient, amount: number) {
   const leasings = [];
-  const cutsomers = await prisma.customer.findMany();
+  const customers = await prisma.customer.findMany();
   const fleet = await prisma.fleet.findMany();
   const staff = await prisma.staff.findMany();
 
-  for (let i = 0; i < cutsomers.length; i++) {
-    if (i + 1 > fleet.length) {
-      break;
-    }
+  for (let i = 0; i < amount; i++) {
+    const pickupDate = generateRandomDate(new Date().getFullYear());
+    const returnDate = generateRandomDateAfter(pickupDate);
 
     const leasing = {
-      vehicleId: i + 1,
+      vehicleId: faker.number.int({ min: 1, max: fleet.length }),
       createdByEmployeeId: faker.number.int({ min: 1, max: staff.length }),
-      customerId: i + 1,
-      pickupDate: faker.date.between({
-        from: '2024-01-01T00:00:00.000Z',
-        to: '2024-02-28T00:00:00.000Z',
-      }),
-      returnDate: faker.date.between({
-        from: '2024-01-10T00:00:00.000Z',
-        to: '2024-03-10T00:00:00.000Z',
-      }),
-      allowedMileage: faker.number.int({ min: 100, max: 5000 }),
+      customerId: faker.number.int({ min: 1, max: customers.length }),
+      pickupDate,
+      returnDate,
+      allowedMileage: faker.number.int({ min: 100, max: 500 }),
     };
 
     leasings.push(leasing);
@@ -201,6 +193,30 @@ export async function generateLeasings(prisma: PrismaClient) {
   return leasings;
 }
 
+function generateRandomDate(year: number): Date {
+  const startDate = new Date(year, 0, 1); // Start of the year
+  const endDate = new Date(year, 11, 31); // End of the year
+
+  // Generate a random number of milliseconds since the start of the year
+  const randomTime =
+    startDate.getTime() +
+    Math.random() * (endDate.getTime() - startDate.getTime());
+
+  return new Date(randomTime);
+}
+
+function generateRandomDateAfter(startDate: Date): Date {
+  const minDaysToAdd = 1; // Minimum number of days to add
+  const maxDaysToAdd = 19; // Maximum number of days to add
+  const daysToAdd =
+    minDaysToAdd +
+    Math.floor(Math.random() * (maxDaysToAdd - minDaysToAdd + 1));
+
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + daysToAdd);
+
+  return endDate;
+}
 export async function getPricePerHourAndDurationForLeasing(
   prisma: PrismaClient,
   leasingId,
@@ -223,7 +239,6 @@ export async function getPricePerHourAndDurationForLeasing(
       throw new Error('--> Leasing or associated vehicle not found');
     }
 
-    // Calculate the rental duration in days
     const pickupDate = new Date(leasing.pickupDate);
     const returnDate = new Date(leasing.returnDate);
     const durationInMilliseconds = returnDate.getTime() - pickupDate.getTime();
@@ -253,10 +268,6 @@ export async function generateInvoices(prisma: PrismaClient) {
       leasingId: i + 1,
       amountDue: Number(pricePerHour) * durationInDays,
       insuranceAmount: faker.number.int({ min: 0, max: 2000 }),
-      status:
-        INVOICE_STATUSES[
-          faker.number.int({ min: 0, max: INVOICE_STATUSES.length - 1 })
-        ],
     };
 
     invoices.push(invoice);

@@ -1,25 +1,25 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { PrismaClientManager } from 'src/manager/manager.service';
+import { checkEmployeeIdExists, checkUserIdExists } from 'src/data/dbUtils';
 import { PrismaClientUnknownRequestError } from '@prisma/client/runtime/library';
-import { async } from 'rxjs';
-import {
-  ExtendedPrismaClient,
-  PrismaClientManager,
-} from 'src/manager/manager.service';
 
 @Injectable()
-export class CustomersService {
+export class EmployeesService {
   constructor(private readonly manager: PrismaClientManager) {}
+
+  async create(createEmployeeDto: CreateEmployeeDto) {}
 
   async findAll(tenantId: string) {
     try {
       const client = await this.manager.getClient(tenantId);
-      return await client.customer.findMany();
+      return await client.staff.findMany();
     } catch (error) {
       this.handleError(error);
     }
@@ -28,31 +28,29 @@ export class CustomersService {
   async findOne(tenantId: string, id: number) {
     try {
       const client = await this.manager.getClient(tenantId);
-      return await client.customer.findUnique({
-        where: {
-          id,
-        },
+      return await client.staff.findUnique({
+        where: { id },
       });
     } catch (error) {
       this.handleError(error);
     }
   }
 
-  async update(
-    tenantId: string,
-    id: number,
-    updateCustomerDto: UpdateCustomerDto,
-  ) {
-    try {
-      const client = await this.manager.getClient(tenantId);
-    } catch (error) {
-      this.handleError(error);
-    }
+  update(id: number, updateEmployeeDto: UpdateEmployeeDto) {
+    return `This action updates a #${id} employee`;
   }
 
   async remove(tenantId: string, id: number) {
     try {
       const client = await this.manager.getClient(tenantId);
+
+      const employeeExists = await checkEmployeeIdExists(client, id);
+
+      if (!employeeExists) {
+        throw new BadRequestException('Employee does not exist.');
+      }
+
+      await client.staff.delete({ where: { id } });
     } catch (error) {
       this.handleError(error);
     }

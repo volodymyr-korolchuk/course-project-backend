@@ -48,6 +48,7 @@ export class AuthService {
 
     const accessToken = await this.jwtService.sign(user);
     const refreshToken = await this.jwtService.sign(user, { expiresIn: '7d' });
+    console.log('this: ', { user, accessToken, refreshToken });
 
     return { user, accessToken, refreshToken };
   }
@@ -70,20 +71,18 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    const user = await this.client.user.create({
+    await this.client.user.create({
       data: {
         email: registerDto.email,
         roleId: DB_ROLES_ID.Customer,
         hashedPassword: hashedPassword,
-      },
-    });
-
-    await this.client.customer.create({
-      data: {
-        userId: user.id,
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-        phoneNumber: registerDto.phoneNumber,
+        Customer: {
+          create: {
+            firstName: registerDto.firstName,
+            lastName: registerDto.lastName,
+            phoneNumber: registerDto.phoneNumber,
+          },
+        },
       },
     });
   }
@@ -107,7 +106,7 @@ export class AuthService {
     const customer = await getCustomerByUserId(this.client, user.id);
     const employee = await getEmployeeByUserId(this.client, user.id);
 
-    const { firstName, lastName } = customer || employee;
-    return { firstName, lastName, email: user.email };
+    const { id, firstName, lastName } = customer || employee;
+    return { id, firstName, lastName, email: user.email };
   }
 }

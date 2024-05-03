@@ -9,7 +9,6 @@ import {
   generateMaintenanceReports,
   generateParkingLocations,
   generatePayments,
-  generateSalaryPayments,
   generateStaff,
   generateUser,
   generateVehicleClasses,
@@ -27,7 +26,6 @@ async function isDatabaseEmpty() {
       'User',
       'Customer',
       'Staff',
-      'SalaryPayment',
       'Fleet',
       'VehicleClass',
       'ParkingLocation',
@@ -86,11 +84,6 @@ async function main() {
     await prisma.customer.create({ data: customer });
   }
 
-  const salaryPayments = await generateSalaryPayments(prisma);
-  for (const payment of salaryPayments) {
-    await prisma.salaryPayment.create({ data: payment });
-  }
-
   const parkingLocations = await generateParkingLocations(20);
   for (const location of parkingLocations) {
     await prisma.parkingLocation.create({
@@ -114,7 +107,7 @@ async function main() {
     });
   }
 
-  const leasings = await generateLeasings(prisma);
+  const leasings = await generateLeasings(prisma, 2000);
   for (const leasing of leasings) {
     await prisma.leasing.create({ data: leasing });
   }
