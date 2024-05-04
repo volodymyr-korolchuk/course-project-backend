@@ -37,6 +37,12 @@ export class EmployeesController {
     return this.employeesService.findAll(tenantId);
   }
 
+  @Get('analytics')
+  @Roles([DB_ROLES.Employee])
+  getAnalytics(@TenantId() tenantId: string) {
+    return this.employeesService.getAnalytics(tenantId);
+  }
+
   @Get(':id')
   @Roles([DB_ROLES.Customer, DB_ROLES.Employee])
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {

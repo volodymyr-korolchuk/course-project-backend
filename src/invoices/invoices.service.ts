@@ -99,8 +99,6 @@ export class InvoicesService {
         },
       });
 
-      console.log('sending: ', result);
-
       return result;
     } catch (error) {
       this.handleError(error);

@@ -39,6 +39,24 @@ export class UsersService {
     } catch (error) {}
   }
 
+  async getCustomerId(tenantId: string, id: string) {
+    try {
+      const client = await this.manager.getClient(tenantId);
+      return await client.user.findUnique({
+        where: {
+          id: +id,
+        },
+        select: {
+          Customer: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+    } catch (error) {}
+  }
+
   async update(tenantId: string, id: number, updateUserDto: UpdateUserDto) {
     try {
       const client = await this.manager.getClient(tenantId);

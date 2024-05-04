@@ -52,9 +52,29 @@ export class FleetService {
         throw new BadRequestException('Parking location does not exist.');
       }
 
-      const result = await client.fleet.create({ data: createVehicleDto });
+      const result = await client.$executeRaw`
+        CALL add_car(
+          ${createVehicleDto.make},
+          ${createVehicleDto.model},
+          ${createVehicleDto.productionYear},
+          ${createVehicleDto.color},
+          ${createVehicleDto.classId},
+          ${createVehicleDto.mileage},
+          ${createVehicleDto.vrm},
+          ${createVehicleDto.parkingLocationId}
+        );
+      `;
 
       return result;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async exportData(tenantId: string) {
+    try {
+      const client = await this.manager.getClient(tenantId);
+      await client.$executeRaw`COPY (SELECT * FROM fleet) TO 'D:/solid_rents_fleet_export.csv' WITH CSV HEADER;`;
     } catch (error) {
       this.handleError(error);
     }

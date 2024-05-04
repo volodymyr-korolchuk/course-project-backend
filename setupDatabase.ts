@@ -129,8 +129,11 @@ async function createRoles() {
     );
 
     await client.query(
-      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE fleet, customers, vehicle_classes, staff, users, leasings, invoices, payments, parking_locations, users_id_seq, customers_id_seq, staff_id_seq, leasings_id_seq, vehicle_classes_id_seq, fleet_id_seq, invoices_id_seq, payments_id_seq, parking_locations_id_seq TO employee',
+      'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE fleet, customers, vehicle_classes, staff, users, leasings, invoices, payments, parking_locations, users_id_seq, customers_id_seq, staff_id_seq, leasings_id_seq, vehicle_classes_id_seq, fleet_id_seq, invoices_id_seq, payments_id_seq, parking_locations_id_seq, monthly_analytics, monthly_analytics_id_seq TO employee',
     );
+
+    await client.query('GRANT pg_write_server_files TO employee');
+    await client.query('GRANT pg_write_server_files TO admin');
 
     console.log('--> Roles created successfully');
   } catch (error) {
@@ -275,43 +278,33 @@ async function createFunctions() {
     `);
 
     await client.query(`
-      CREATE OR REPLACE FUNCTION remove_rentals_before_vehicle_removal()
-      RETURNS TRIGGER AS $$
+      CREATE OR REPLACE PROCEDURE add_car(
+        make_param VARCHAR(64),
+        model_param VARCHAR(64),
+        production_year_param INT,
+        color_param VARCHAR(32),
+        class_id_param INT,
+        mileage_param INT,
+        vrm_param VARCHAR(8),
+        parking_location_id_param INT
+      )
+      LANGUAGE plpgsql
+      AS $$
       BEGIN
-          DELETE FROM leasings WHERE vehicle_id = OLD.id;
-          RETURN OLD;
+          INSERT INTO Fleet (make, model, production_year, color, classId, mileage, vrm, parkingLocationId)
+          VALUES (make_param, model_param, production_year_param, color_param, class_id_param, mileage_param, vrm_param, parking_location_id_param);
       END;
-      $$ LANGUAGE plpgsql;
-
-      CREATE TRIGGER remove_rentals_trigger
-      BEFORE DELETE ON fleet
-      FOR EACH ROW
-      EXECUTE FUNCTION remove_rentals_before_vehicle_removal();
+      $$;
     `);
 
-    // await client.query(`
-    //   CREATE OR REPLACE FUNCTION remove_payment_and_invoice()
-    //   RETURNS TRIGGER AS $$
-    //   DECLARE
-    //     to_remove_invoice_id INT;
-    //     to_remove_payment_id INT;
-    //   BEGIN
-    //       SELECT id INTO to_remove_invoice_id FROM invoices WHERE leasing_id = OLD.id;
-    //       SELECT id INTO to_remove_payment_id FROM payments WHERE invoice_id = to_remove_invoice_id;
+    await client.query(
+      `CREATE INDEX idx_pickup_date ON leasings (pickup_date);`,
+    );
+    await client.query(
+      `CREATE INDEX idx_return_date ON leasings (return_date);`,
+    );
 
-    //       DELETE FROM payments WHERE id = to_remove_payment_id;
-    //       DELETE FROM invoices WHERE id = to_remove_invoice_id;
-
-    //       RETURN OLD;
-    //   END;
-    //   $$ LANGUAGE plpgsql;
-
-    //   CREATE TRIGGER remove_payment_and_invoice_trigger
-    //   BEFORE DELETE ON leasings
-    //   EXECUTE FUNCTION remove_payment_and_invoice();
-    // `);
-
-    console.log('--> Functions created successfully');
+    console.log('--> Functions, Procedures and Indexes created successfully');
   } catch (error) {
     console.error(error.message);
   } finally {

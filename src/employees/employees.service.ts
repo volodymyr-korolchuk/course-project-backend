@@ -56,6 +56,15 @@ export class EmployeesService {
     }
   }
 
+  async getAnalytics(tenantId: string) {
+    try {
+      const client = await this.manager.getClient(tenantId);
+      return await client.monthlyAnalytics.findMany();
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   private handleError(error: any) {
     if (error instanceof PrismaClientUnknownRequestError) {
       console.error(error.message);

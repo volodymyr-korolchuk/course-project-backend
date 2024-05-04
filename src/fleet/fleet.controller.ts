@@ -31,6 +31,12 @@ export class FleetController {
     return this.fleetService.create(tenantId, createFleetDto);
   }
 
+  @Post('/export')
+  @Roles([DB_ROLES.Employee])
+  exportData(@TenantId() tenantId) {
+    return this.fleetService.exportData(tenantId);
+  }
+
   @Get()
   @Roles(Object.values(DB_ROLES).filter((x) => x !== DB_ROLES.Guest))
   findAll(@TenantId() tenantId: string) {

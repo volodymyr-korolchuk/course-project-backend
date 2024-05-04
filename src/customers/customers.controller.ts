@@ -28,6 +28,12 @@ export class CustomersController {
     return this.customersService.findAll(tenantId);
   }
 
+  @Get('/my-invoices/:id')
+  @Roles([DB_ROLES.Employee, DB_ROLES.Customer])
+  findPayments(@TenantId() tenantId: string, @Param('id') id: string) {
+    return this.customersService.findPayments(id, tenantId);
+  }
+
   @Get(':id')
   @Roles([DB_ROLES.Employee])
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {

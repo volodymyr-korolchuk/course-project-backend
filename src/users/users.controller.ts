@@ -30,7 +30,12 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Get("/staff")
+  @Get('/customer-id/:id')
+  getCustomerId(@TenantId() tenantId, @Param('id') id: string) {
+    return this.usersService.getCustomerId(tenantId, id);
+  }
+
+  @Get('/staff')
   findStaff(@TenantId() tenantId: string) {
     return this.usersService.findStaff(tenantId);
   }

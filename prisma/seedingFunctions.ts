@@ -267,7 +267,7 @@ export async function generateInvoices(prisma: PrismaClient) {
     const invoice = {
       leasingId: i + 1,
       amountDue: Number(pricePerHour) * durationInDays,
-      insuranceAmount: faker.number.int({ min: 0, max: 2000 }),
+      insuranceAmount: faker.number.int({ min: 0, max: 800 }),
     };
 
     invoices.push(invoice);

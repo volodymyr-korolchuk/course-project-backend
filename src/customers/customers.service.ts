@@ -58,6 +58,41 @@ export class CustomersService {
     }
   }
 
+  async findPayments(tenantId: string, id) {
+    try {
+      const client = await this.manager.getClient(tenantId);
+      await client.invoice.findMany({
+        where: {
+          Leasing: {
+            customerId: id,
+          },
+        },
+        select: {
+          amountDue: true,
+          insuranceAmount: true,
+          Payment: {
+            select: {
+              id: true,
+            },
+          },
+          Leasing: {
+            select: {
+              Vehicle: {
+                select: {
+                  make: true,
+                  model: true,
+                  color: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   private handleError(error: any) {
     if (error instanceof PrismaClientUnknownRequestError) {
       console.error(error.message);
